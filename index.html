@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ADNEXO Earn Bot</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="//libtl.com/sdk.js" data-zone="12313750" data-sdk="show_12313750"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    :root{--bg:#0d1117;--card:#161b22;--card-border:#21262d;--blue:#3b82f6;--green:#22c55e;--text:#e6edf3;--text-muted:#8b949e}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+    #app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:80px;position:relative}
+    .page{display:none;padding:16px;animation:fadeIn .25s ease}
+    .page.active{display:block}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .profile-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:8px 4px}
+    .profile-photo{width:52px;height:52px;border-radius:50%;object-fit:cover;background:#30363d;border:2px solid var(--card-border)}
+    .profile-info .user-name{font-size:17px;font-weight:600;color:var(--text)}
+    .app-subtitle{font-size:13px;color:var(--text-muted);margin-top:2px}
+    .card{background:var(--card);border-radius:20px;padding:24px 20px;border:1px solid var(--card-border)}
+    .main-card{text-align:center}
+    .app-title{font-size:26px;font-weight:700;margin-bottom:16px;letter-spacing:-.5px}
+    .section-title{font-size:20px;font-weight:600;color:var(--blue);margin-bottom:20px;text-align:center}
+    .country-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.35);color:#60a5fa;padding:8px 16px;border-radius:999px;font-size:14px;margin-bottom:24px}
+    .country-badge.top{display:flex;justify-content:center;margin:0 auto 16px;width:fit-content}
+    .stats-row{display:flex;gap:12px;margin-bottom:24px}
+    .stat-box{flex:1;background:#0d1117;border-radius:14px;padding:18px 12px;text-align:center;border:1px solid var(--card-border)}
+    .stat-value{font-size:28px;font-weight:700;line-height:1.1;margin-bottom:6px}
+    .stat-value.blue{color:#60a5fa}.stat-value.green{color:#4ade80}
+    .stat-label{font-size:11px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase}
+    .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px;border:none;border-radius:14px;font-size:17px;font-weight:600;cursor:pointer;transition:all .15s ease;margin-bottom:12px}
+    .btn:active{transform:scale(.97)}
+    .btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+    .btn-blue{background:#3b82f6;color:#fff}
+    .btn-green{background:#22c55e;color:#fff}
+    .btn-gray{background:#30363d;color:var(--text)}
+    .btn-red{background:#ef4444;color:#fff}
+    .btn .icon{font-size:16px}
+    .btn.full{margin-bottom:0}
+    .form-group{margin-bottom:16px;text-align:left}
+    .form-group label{display:block;font-size:14px;color:var(--text-muted);margin-bottom:8px}
+    .input{width:100%;padding:14px 16px;background:#0d1117;border:1px solid var(--card-border);border-radius:12px;color:var(--text);font-size:16px;outline:none}
+    .input:focus{border-color:var(--blue)}
+    select.input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b949e' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;padding-right:40px}
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:#0d1117;border-top:1px solid var(--card-border);display:flex;padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:100}
+    .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;color:var(--text-muted);font-size:12px;padding:8px;cursor:pointer}
+    .nav-item.active{color:var(--blue)}
+    .nav-icon{font-size:22px;line-height:1}
+    .requests-list,.users-list{max-height:60vh;overflow-y:auto}
+    .request-item,.user-item{background:#0d1117;border:1px solid var(--card-border);border-radius:12px;padding:14px;margin-bottom:10px;font-size:14px}
+    .request-item .req-header,.user-item .user-header{display:flex;justify-content:space-between;margin-bottom:6px;align-items:center}
+    .request-item .req-name,.user-item .u-name{font-weight:600}
+    .request-item .req-status{font-size:12px;padding:2px 8px;border-radius:999px;background:rgba(234,179,8,.15);color:#eab308}
+    .request-item .req-status.paid{background:rgba(34,197,94,.15);color:#22c55e}
+    .request-item .req-status.rejected{background:rgba(239,68,68,.15);color:#ef4444}
+    .request-item .req-detail,.user-item .u-detail{color:var(--text-muted);font-size:13px;line-height:1.5}
+    .request-actions{display:flex;gap:8px;margin-top:10px}
+    .request-actions button{flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+    .btn-paid{background:#22c55e;color:#fff}.btn-reject{background:#ef4444;color:#fff}
+    .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:#21262d;color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:all .3s ease;z-index:999;max-width:90%;text-align:center;border:1px solid var(--card-border)}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .loading-text{text-align:center;color:#8b949e;padding:20px}
+    .admin-status{text-align:center;margin-bottom:16px;padding:12px;border-radius:12px;font-size:14px;font-weight:600}
+    .admin-status.on{background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3)}
+    .admin-status.off{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
+    .work-disabled-msg{text-align:center;color:#ef4444;font-size:14px;margin-top:8px;display:none}
+    .rank-badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;border-radius:50%;background:rgba(59,130,246,.2);color:#60a5fa;font-size:13px;font-weight:700;margin-right:8px}
+    .rank-badge.top1{background:rgba(234,179,8,.25);color:#eab308}
+    .rank-badge.top2{background:rgba(156,163,175,.25);color:#9ca3af}
+    .rank-badge.top3{background:rgba(180,83,9,.25);color:#d97706}
+    .users-summary{text-align:center;margin-bottom:16px;padding:14px;background:#0d1117;border-radius:12px;border:1px solid var(--card-border)}
+    .users-summary .sum-num{font-size:32px;font-weight:700;color:#60a5fa}
+    .users-summary .sum-label{font-size:13px;color:var(--text-muted);margin-top:4px}
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="home-page" class="page active">
+      <div class="profile-header">
+        <img id="user-photo" class="profile-photo" src="" alt="Profile" />
+        <div class="profile-info">
+          <div id="user-name" class="user-name">Loading...</div>
+          <div class="app-subtitle">ADNEXO · Mini App</div>
+        </div>
+      </div>
+      <div class="card main-card">
+        <h1 class="app-title">ADNEXO</h1>
+        <div class="country-badge">
+          <span>🌐</span>
+          <span>Country: <strong id="country-name">Global</strong></span>
+        </div>
+        <div class="stats-row">
+          <div class="stat-box">
+            <div id="current-points" class="stat-value blue">0</div>
+            <div class="stat-label">CURRENT POINTS</div>
+          </div>
+          <div class="stat-box">
+            <div id="current-balance" class="stat-value green">0.00 tk</div>
+            <div class="stat-label">CURRENT BALANCE</div>
+          </div>
+        </div>
+        <button id="btn-watch-ad" class="btn btn-blue" disabled>
+          <span class="icon">▶</span> Watch Ad
+        </button>
+        <p id="work-disabled-msg" class="work-disabled-msg">এডমিন এখন কাজ বন্ধ রেখেছেন</p>
+        <button id="btn-add-balance" class="btn btn-green">
+          <span class="icon">□</span> Add My Balance
+        </button>
+      </div>
+    </div>
+
+    <div id="balance-page" class="page">
+      <div class="country-badge top">
+        <span>🌐</span>
+        <span>Country: <strong id="country-name-2">Global</strong></span>
+      </div>
+      <div class="card">
+        <h2 class="section-title">Withdraw Earnings</h2>
+        <div class="stats-row">
+          <div class="stat-box">
+            <div id="total-points" class="stat-value blue">0</div>
+            <div class="stat-label">TOTAL POINTS</div>
+          </div>
+          <div class="stat-box">
+            <div id="total-balance" class="stat-value green">0.00 tk</div>
+            <div class="stat-label">TOTAL BALANCE</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Payment Method</label>
+          <select id="payment-method" class="input">
+            <option value="BKASH">BKASH</option>
+            <option value="NAGAD">NAGAD</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Account Number</label>
+          <input type="text" id="account-number" class="input" placeholder="01XXXXXXXXX" maxlength="15" />
+        </div>
+        <button id="btn-withdraw" class="btn btn-green full">WITHDRAW</button>
+        <button id="btn-view-users" class="btn btn-blue full" style="margin-top:12px;">
+          সকল ইউজারের কাজ দেখুন
+        </button>
+        <button id="btn-view-requests" class="btn btn-blue full" style="display:none;margin-top:12px;">
+          View Withdraw Requests
+        </button>
+      </div>
+    </div>
+
+    <div id="users-page" class="page">
+      <div class="card">
+        <h2 class="section-title">সকল ইউজারের কাজ</h2>
+        <div class="users-summary">
+          <div id="total-users-count" class="sum-num">0</div>
+          <div class="sum-label">মোট ইউজার</div>
+        </div>
+        <div id="users-list" class="users-list">
+          <p class="loading-text">লোড হচ্ছে...</p>
+        </div>
+        <button id="btn-back-users" class="btn btn-gray full" style="margin-top:16px;">← Back</button>
+      </div>
+    </div>
+
+    <div id="admin-page" class="page">
+      <div class="card">
+        <h2 class="section-title">Admin Panel</h2>
+        <div id="admin-work-status" class="admin-status off">কাজ বন্ধ আছে</div>
+        <button id="btn-toggle-work" class="btn btn-red full" style="margin-bottom:20px;">
+          কাজ চালু করুন
+        </button>
+        <h2 class="section-title" style="margin-top:8px;">Withdraw Requests</h2>
+        <div id="requests-list" class="requests-list">
+          <p class="loading-text">লোড হচ্ছে...</p>
+        </div>
+        <button id="btn-back-admin" class="btn btn-gray full" style="margin-top:16px;">← Back</button>
+      </div>
+    </div>
+
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-page="home">
+        <span class="nav-icon">⌂</span>
+        <span>Home</span>
+      </button>
+      <button class="nav-item" data-page="balance">
+        <span class="nav-icon">□</span>
+        <span>My Balance</span>
+      </button>
+    </nav>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+  (function(){
+    'use strict';
+
+    const ADMIN_IDS = [8716565262];
+    const BOT_NAME  = 'adnexo_earn_bot';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDEZSP3R_kFgcF4X2qFAUZP0LVl7-chX6s",
+      authDomain: "wach-add-11.firebaseapp.com",
+      projectId: "wach-add-11",
+      storageBucket: "wach-add-11.firebasestorage.app",
+      messagingSenderId: "640730948357",
+      appId: "1:640730948357:web:f1611db5975b5819200d6c"
+    };
+
+    let db = null;
+    try {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+    } catch (e) {
+      console.error('Firebase init error:', e);
+    }
+
+    const ALLOWED_COUNTRIES = [
+      'Canada','United States','United Kingdom','Germany',
+      'Italy','Brazil','Australia','France',
+      'Poland','Spain','Netherlands','Sweden','Belgium',
+      'Austria','Portugal','Ireland','Switzerland','Norway',
+      'Denmark','Finland','Czech Republic','Hungary','Romania',
+      'Greece','Slovakia','Croatia','Bulgaria','Lithuania',
+      'Latvia','Estonia','Slovenia','Cyprus','Malta','Luxembourg'
+    ];
+
+    const DIRECT_LINKS = [
+      'https://uplcm.com/4/12024254','https://uplcm.com/4/12024247',
+      'https://uplcm.com/4/12047439','https://uplcm.com/4/12024299',
+      'https://uplcm.com/4/12024257','https://uplcm.com/4/12020003',
+      'https://uplcm.com/4/12024258','https://uplcm.com/4/12047440',
+      'https://uplcm.com/4/12024240','https://uplcm.com/4/12024253',
+      'https://uplcm.com/4/12024245','https://uplcm.com/4/12024241',
+      'https://uplcm.com/4/12019998','https://uplcm.com/4/12024239',
+      'https://uplcm.com/4/12047442','https://uplcm.com/4/12024242',
+      'https://uplcm.com/4/11993764','https://uplcm.com/4/12024256',
+      'https://uplcm.com/4/12024244','https://uplcm.com/4/12024248'
+    ];
+
+    let tg = null;
+    let userData = null;
+    let isWatchingAd = false;
+    let currentUserId = null;
+    let userDisplayName = 'User';
+    let pendingDirectReward = false;
+    let userLeftForAd = false;
+    let lastLinkIndex = -1;
+    let isSaving = false;
+    let adsEnabled = true;
+    let settingsUnsub = null;
+    let saveTimeout = null;
+    let pendingResetTimeout = null;
+    let linkOpenTime = 0;
+    let returnPollInterval = null;
+
+    const $  = s => document.querySelector(s);
+    const $$ = s => document.querySelectorAll(s);
+
+    // Bot-specific user document so data never mixes with other bots
+    function userDocRef() {
+      return db.collection('users').doc(BOT_NAME + '_' + String(currentUserId));
+    }
+
+    async function loadUserFromFirebase() {
+      if (!db || !currentUserId) return null;
+      try {
+        const snap = await userDocRef().get();
+        if (snap.exists) {
+          const d = snap.data();
+          return {
+            current_points: Number(d.current_points) || 0,
+            current_balance: Number(d.current_balance) || 0,
+            total_points: Number(d.total_points) || 0,
+            total_balance: Number(d.total_balance) || 0,
+            country: d.country || 'Global',
+            first_name: d.first_name || userDisplayName,
+            is_admin: ADMIN_IDS.includes(Number(currentUserId))
+          };
+        }
+      } catch (e) {
+        console.warn('loadUserFromFirebase error', e);
+      }
+      return null;
+    }
+
+    async function saveUserToFirebase() {
+      if (!db || !currentUserId || !userData || isSaving) return;
+      isSaving = true;
+      try {
+        await userDocRef().set({
+          current_points: Number(userData.current_points) || 0,
+          current_balance: Number(userData.current_balance) || 0,
+          total_points: Number(userData.total_points) || 0,
+          total_balance: Number(userData.total_balance) || 0,
+          country: userData.country || 'Global',
+          first_name: userDisplayName || 'User',
+          telegram_id: String(currentUserId),
+          bot_name: BOT_NAME,
+          updated_at: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      } catch (e) {
+        console.warn('saveUserToFirebase error', e);
+      } finally {
+        isSaving = false;
+      }
+    }
+
+    // Debounce Firebase writes so concurrent users don't cause lag
+    function scheduleSave(force) {
+      if (force) {
+        if (saveTimeout) {
+          clearTimeout(saveTimeout);
+          saveTimeout = null;
+        }
+        saveUserToFirebase();
+        return;
+      }
+      if (saveTimeout) clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(function () {
+        saveTimeout = null;
+        saveUserToFirebase();
+      }, 1500);
+    }
+
+    function cacheKey() {
+      return 'adnexo_cache_' + (currentUserId || 'guest');
+    }
+
+    function saveCache() {
+      if (!userData || !currentUserId) return;
+      try {
+        localStorage.setItem(cacheKey(), JSON.stringify({
+          current_points: userData.current_points,
+          current_balance: userData.current_balance,
+          total_points: userData.total_points,
+          total_balance: userData.total_balance,
+          country: userData.country
+        }));
+      } catch (e) {}
+    }
+
+    function loadCache() {
+      try {
+        const raw = localStorage.getItem(cacheKey());
+        if (raw) {
+          const p = JSON.parse(raw);
+          return {
+            current_points: Number(p.current_points) || 0,
+            current_balance: Number(p.current_balance) || 0,
+            total_points: Number(p.total_points) || 0,
+            total_balance: Number(p.total_balance) || 0,
+            country: p.country || 'Global',
+            is_admin: ADMIN_IDS.includes(Number(currentUserId))
+          };
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    // Bot-specific settings so ads toggle is independent
+    function settingsRef() {
+      return db.collection('settings').doc(BOT_NAME);
+    }
+
+    async function loadAdsEnabled() {
+      if (!db) return true;
+      try {
+        const snap = await settingsRef().get();
+        if (snap.exists) {
+          return snap.data().ads_enabled !== false;
+        }
+        await settingsRef().set({
+          ads_enabled: true,
+          updated_at: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        return true;
+      } catch (e) {
+        console.warn('loadAdsEnabled error', e);
+        return true;
+      }
+    }
+
+    function listenAdsEnabled() {
+      if (!db) return;
+      if (settingsUnsub) settingsUnsub();
+      settingsUnsub = settingsRef().onSnapshot(function(snap) {
+        if (snap.exists) {
+          adsEnabled = snap.data().ads_enabled !== false;
+        } else {
+          adsEnabled = true;
+        }
+        updateUI();
+        updateAdminToggleUI();
+      }, function(err) {
+        console.warn('settings listener error', err);
+      });
+    }
+
+    async function toggleAdsEnabled() {
+      if (!db || !userData || !userData.is_admin) return;
+      const btn = $('#btn-toggle-work');
+      btn.disabled = true;
+      try {
+        const newVal = !adsEnabled;
+        await settingsRef().set({
+          ads_enabled: newVal,
+          updated_at: firebase.firestore.FieldValue.serverTimestamp(),
+          updated_by: String(currentUserId)
+        }, { merge: true });
+        adsEnabled = newVal;
+        updateAdminToggleUI();
+        updateUI();
+        showToast(newVal ? 'সব ইউজারের কাজ চালু করা হয়েছে' : 'সব ইউজারের কাজ বন্ধ করা হয়েছে');
+      } catch (e) {
+        console.error('toggleAdsEnabled error', e);
+        showToast('আপডেট করতে সমস্যা হয়েছে');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function updateAdminToggleUI() {
+      const statusEl = $('#admin-work-status');
+      const btn = $('#btn-toggle-work');
+      if (!statusEl || !btn) return;
+      if (adsEnabled) {
+        statusEl.textContent = 'কাজ চালু আছে';
+        statusEl.className = 'admin-status on';
+        btn.textContent = 'কাজ বন্ধ করুন';
+        btn.className = 'btn btn-red full';
+      } else {
+        statusEl.textContent = 'কাজ বন্ধ আছে';
+        statusEl.className = 'admin-status off';
+        btn.textContent = 'কাজ চালু করুন';
+        btn.className = 'btn btn-green full';
+      }
+    }
+
+    async function init() {
+      if (window.Telegram && window.Telegram.WebApp) {
+        tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        tg.setHeaderColor('#0d1117');
+        tg.setBackgroundColor('#0d1117');
+
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+          const u = tg.initDataUnsafe.user;
+          currentUserId = String(u.id);
+          userDisplayName = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || 'User';
+          setProfile(u);
+        } else {
+          currentUserId = 'unknown';
+          userDisplayName = 'User';
+          setProfile({ first_name: 'User', last_name: '', username: '' });
+        }
+      } else {
+        currentUserId = 'test_user';
+        userDisplayName = 'Test User';
+        setProfile({ first_name: 'Test', last_name: 'User', username: 'testuser' });
+      }
+
+      userData = loadCache() || {
+        current_points: 0,
+        current_balance: 0,
+        total_points: 0,
+        total_balance: 0,
+        country: 'Global',
+        is_admin: ADMIN_IDS.includes(Number(currentUserId))
+      };
+      userData.is_admin = ADMIN_IDS.includes(Number(currentUserId));
+      updateUI();
+
+      const cloudData = await loadUserFromFirebase();
+      if (cloudData) {
+        userData = cloudData;
+        saveCache();
+        updateUI();
+      }
+
+      scheduleSave(true);
+
+      adsEnabled = await loadAdsEnabled();
+      listenAdsEnabled();
+      updateUI();
+      updateAdminToggleUI();
+
+      lastLinkIndex = Number(localStorage.getItem('adnexo_last_link_idx') || -1);
+
+      detectCountry().then(function (c) {
+        if (!userData) return;
+        const newCountry = ALLOWED_COUNTRIES.includes(c) ? c : 'Global';
+        if (userData.country !== newCountry) {
+          userData.country = newCountry;
+          saveCache();
+          scheduleSave(true);
+          updateUI();
+        }
+      });
+
+      document.addEventListener('visibilitychange', onVisibilityChange);
+      window.addEventListener('focus', onVisibilityChange);
+      window.addEventListener('pageshow', onVisibilityChange);
+
+      // Flush pending save when user leaves the app
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden && saveTimeout) {
+          clearTimeout(saveTimeout);
+          saveTimeout = null;
+          saveUserToFirebase();
+        }
+      });
+
+      bindEvents();
+    }
+
+    async function detectCountry() {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        const data = await res.json();
+        return data.country_name || 'Global';
+      } catch (e) {
+        return 'Global';
+      }
+    }
+
+    function setProfile(u) {
+      const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || 'User';
+      userDisplayName = name;
+      $('#user-name').textContent = name;
+      const photo = $('#user-photo');
+      photo.src = u.photo_url || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(name) + '&background=3b82f6&color=fff&size=128');
+    }
+
+    function updateUI() {
+      if (!userData) return;
+      const country = userData.country || 'Global';
+      $('#country-name').textContent = country;
+      $('#country-name-2').textContent = country;
+      $('#current-points').textContent = Math.floor(userData.current_points || 0);
+      $('#current-balance').textContent = Number(userData.current_balance || 0).toFixed(2) + ' tk';
+      $('#total-points').textContent = Math.floor(userData.total_points || 0);
+      $('#total-balance').textContent = Number(userData.total_balance || 0).toFixed(2) + ' tk';
+      const btn = $('#btn-watch-ad');
+      // Disable while watching OR waiting for return from direct link
+      const canWatch = adsEnabled && ALLOWED_COUNTRIES.includes(country) && !isWatchingAd && !pendingDirectReward;
+      btn.disabled = !canWatch;
+      const msg = $('#work-disabled-msg');
+      if (msg) msg.style.display = (!adsEnabled) ? 'block' : 'none';
+      $('#btn-view-requests').style.display = userData.is_admin ? 'flex' : 'none';
+    }
+
+    function getNextDirectLink() {
+      lastLinkIndex = (lastLinkIndex + 1) % DIRECT_LINKS.length;
+      try { localStorage.setItem('adnexo_last_link_idx', String(lastLinkIndex)); } catch(e){}
+      return DIRECT_LINKS[lastLinkIndex];
+    }
+
+    async function handleWatchAd() {
+      if (isWatchingAd || pendingDirectReward) return;
+      if (!adsEnabled) {
+        showToast('এডমিন এখন কাজ বন্ধ রেখেছেন। পরে আবার চেষ্টা করুন।');
+        return;
+      }
+      if (!userData || !ALLOWED_COUNTRIES.includes(userData.country)) {
+        showToast('Watch Ad লক আছে। VPN ব্যবহার করুন।');
+        return;
+      }
+      isWatchingAd = true;
+      pendingDirectReward = false;
+      userLeftForAd = false;
+      const btn = $('#btn-watch-ad');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="icon">⏳</span> Loading Ad...';
+
+      let usedDirectFallback = false;
+
+      try {
+        if (typeof show_12313750 === 'function') {
+          try {
+            await show_12313750();
+            // SDK success → reward immediately
+            finishAdAndReward();
+          } catch (sdkErr) {
+            console.warn('SDK ad error:', sdkErr);
+            usedDirectFallback = true;
+            openDirectLinkFallback();
+          }
+        } else {
+          usedDirectFallback = true;
+          openDirectLinkFallback();
+        }
+      } catch (e) {
+        showToast('অ্যাড লোড হয়নি। আবার চেষ্টা করুন।');
+        resetWatchButton();
+      }
+    }
+
+    function clearReturnPoll() {
+      if (returnPollInterval) {
+        clearInterval(returnPollInterval);
+        returnPollInterval = null;
+      }
+    }
+
+    function resetWatchButton() {
+      isWatchingAd = false;
+      pendingDirectReward = false;
+      userLeftForAd = false;
+      linkOpenTime = 0;
+      if (pendingResetTimeout) {
+        clearTimeout(pendingResetTimeout);
+        pendingResetTimeout = null;
+      }
+      clearReturnPoll();
+      const btn = $('#btn-watch-ad');
+      if (btn) {
+        btn.innerHTML = '<span class="icon">▶</span> Watch Ad';
+      }
+      updateUI();
+    }
+
+    function finishAdAndReward() {
+      // Guard against double reward
+      if (!isWatchingAd) return;
+      isWatchingAd = false; // immediately lock so concurrent calls can't double-reward
+      giveReward();
+      resetWatchButton();
+    }
+
+    function tryRewardOnReturn() {
+      if (!pendingDirectReward || !isWatchingAd) return;
+      // Minimum 300ms must pass so accidental instant reward না হয়
+      if (Date.now() - linkOpenTime < 300) return;
+
+      const isVisible = !document.hidden && document.visibilityState === 'visible';
+      if (isVisible || userLeftForAd) {
+        pendingDirectReward = false;
+        userLeftForAd = false;
+        if (pendingResetTimeout) {
+          clearTimeout(pendingResetTimeout);
+          pendingResetTimeout = null;
+        }
+        clearReturnPoll();
+        finishAdAndReward();
+      }
+    }
+
+    function openDirectLinkFallback() {
+      const link = getNextDirectLink();
+      pendingDirectReward = true;
+      userLeftForAd = false;
+      isWatchingAd = true;
+      linkOpenTime = Date.now();
+
+      const btn = $('#btn-watch-ad');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="icon">⏳</span> Ad দেখুন...';
+      }
+
+      // Safety: never leave button stuck forever (90s max)
+      if (pendingResetTimeout) clearTimeout(pendingResetTimeout);
+      pendingResetTimeout = setTimeout(function () {
+        if (pendingDirectReward) {
+          pendingDirectReward = false;
+          userLeftForAd = false;
+          isWatchingAd = false;
+          clearReturnPoll();
+          updateUI();
+          const b = $('#btn-watch-ad');
+          if (b) b.innerHTML = '<span class="icon">▶</span> Watch Ad';
+          showToast('সময় শেষ। আবার চেষ্টা করুন।');
+        }
+      }, 90000);
+
+      // Aggressive polling — টেলিগ্রাম মিনি অ্যাপে visibility event দেরি হলেও দ্রুত ধরবে
+      clearReturnPoll();
+      returnPollInterval = setInterval(function () {
+        if (!pendingDirectReward) {
+          clearReturnPoll();
+          return;
+        }
+        // ইউজার বাইরে গিয়েছে কিনা চেক
+        if (document.hidden || document.visibilityState === 'hidden') {
+          userLeftForAd = true;
+        }
+        // ফিরে এলেই রিওয়ার্ড
+        tryRewardOnReturn();
+      }, 200);
+
+      try {
+        window.open(link, '_blank');
+      } catch (e) {
+        window.location.href = link;
+      }
+      showToast('অ্যাডে ক্লিক করুন। রিডাইরেক্ট হওয়ার পর ব্যাক করলে পয়েন্ট যোগ হবে।');
+    }
+
+    function onVisibilityChange() {
+      if (!pendingDirectReward) return;
+
+      const isHidden = document.hidden || document.visibilityState === 'hidden';
+
+      if (isHidden) {
+        userLeftForAd = true;
+        return;
+      }
+
+      // User came back — immediately try reward
+      tryRewardOnReturn();
+    }
+
+    function giveReward() {
+      if (!userData) return;
+      if (!adsEnabled) {
+        showToast('এডমিন কাজ বন্ধ রেখেছেন। পয়েন্ট যোগ হয়নি।');
+        return;
+      }
+      // Local-first: UI updates instantly, cloud save is debounced
+      userData.current_points  = (userData.current_points || 0) + 1;
+      userData.current_balance = (userData.current_balance || 0) + 0.085;
+      saveCache();
+      updateUI();
+      scheduleSave(); // non-blocking, debounced
+      showToast('+1 পয়েন্ট (+0.085 tk) যোগ হয়েছে!');
+    }
+
+    function handleAddBalance() {
+      if (!userData) return;
+      const curP = userData.current_points || 0;
+      const curB = userData.current_balance || 0;
+      if (curP <= 0 && curB <= 0) {
+        showToast('কোনো Current পয়েন্ট/ব্যালেন্স নেই');
+        return;
+      }
+      userData.total_points    = (userData.total_points || 0) + curP;
+      userData.total_balance   = (userData.total_balance || 0) + curB;
+      userData.current_points  = 0;
+      userData.current_balance = 0;
+      saveCache();
+      updateUI();
+      scheduleSave(true); // force immediate save for important action
+      showToast('Balance সফলভাবে যোগ হয়েছে!');
+    }
+
+    async function handleWithdraw() {
+      if (!userData) return;
+      if (!db) {
+        showToast('Firebase সেটআপ করা হয়নি');
+        return;
+      }
+      const method  = $('#payment-method').value;
+      const account = $('#account-number').value.trim();
+      if (!account || account.length < 10) {
+        showToast('সঠিক একাউন্ট নাম্বার দিন');
+        return;
+      }
+      const totP = userData.total_points || 0;
+      const totB = userData.total_balance || 0;
+      if (totP <= 0 && totB <= 0) {
+        showToast('উইথড্র করার মতো ব্যালেন্স নেই');
+        return;
+      }
+      const btn = $('#btn-withdraw');
+      btn.disabled = true;
+      btn.textContent = 'পাঠানো হচ্ছে...';
+      try {
+        await db.collection('withdraws').add({
+          bot_name: BOT_NAME,
+          telegram_id: currentUserId,
+          first_name: userDisplayName || 'User',
+          method: method,
+          account_number: account,
+          points: totP,
+          amount: totB,
+          status: 'pending',
+          created_at: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        userData.total_points  = 0;
+        userData.total_balance = 0;
+        saveCache();
+        scheduleSave(true);
+        updateUI();
+        $('#account-number').value = '';
+        showToast('Withdraw Request সফলভাবে পাঠানো হয়েছে!');
+      } catch (err) {
+        console.error('Withdraw error:', err);
+        showToast('Request পাঠাতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'WITHDRAW';
+      }
+    }
+
+    async function loadAllUsersWork() {
+      const list = $('#users-list');
+      const countEl = $('#total-users-count');
+      list.innerHTML = '<p class="loading-text">লোড হচ্ছে...</p>';
+      countEl.textContent = '0';
+      if (!db) {
+        list.innerHTML = '<p class="loading-text">Firebase সেটআপ করা হয়নি</p>';
+        return;
+      }
+
+      function renderUsers(arr) {
+        countEl.textContent = String(arr.length);
+        list.innerHTML = '';
+        arr.forEach(function(item, idx) {
+          const rank = idx + 1;
+          const d = item.data;
+          let name = (d.first_name || '').trim();
+          if (!name || name.toLowerCase() === 'user') {
+            name = 'ID: ' + (d.telegram_id || item.id);
+          }
+          // মোট = total + current (কাজ করলেই দেখাবে)
+          const showP = (Number(d.total_points) || 0) + (Number(d.current_points) || 0);
+          const showB = (Number(d.total_balance) || 0) + (Number(d.current_balance) || 0);
+          const country = d.country || 'Global';
+          let rankClass = 'rank-badge';
+          if (rank === 1) rankClass += ' top1';
+          else if (rank === 2) rankClass += ' top2';
+          else if (rank === 3) rankClass += ' top3';
+          const div = document.createElement('div');
+          div.className = 'user-item';
+          div.innerHTML =
+            '<div class="user-header">' +
+              '<span class="u-name"><span class="' + rankClass + '">' + rank + '</span>' + name + '</span>' +
+            '</div>' +
+            '<div class="u-detail">' +
+              'TG ID: ' + (d.telegram_id || item.id) + '<br>' +
+              'মোট পয়েন্ট: <strong style="color:#60a5fa">' + showP + '</strong> | ' +
+              'মোট ব্যালেন্স: <strong style="color:#4ade80">' + showB.toFixed(2) + ' tk</strong><br>' +
+              'Country: ' + country +
+            '</div>';
+          list.appendChild(div);
+        });
+      }
+
+      try {
+        // Only this bot's users — previous bots' data never appears
+        const snapshot = await db.collection('users')
+          .where('bot_name', '==', BOT_NAME)
+          .limit(100)
+          .get();
+        if (snapshot.empty) {
+          list.innerHTML = '<p class="loading-text">কোনো ইউজার নেই</p>';
+          return;
+        }
+        const arr = [];
+        snapshot.forEach(function(doc) {
+          const d = doc.data();
+          const showP = (Number(d.total_points) || 0) + (Number(d.current_points) || 0);
+          arr.push({ id: doc.id, data: d, showP: showP });
+        });
+        arr.sort(function(a, b) { return b.showP - a.showP; });
+        renderUsers(arr);
+      } catch (err) {
+        console.error(err);
+        list.innerHTML = '<p class="loading-text">লোড করতে সমস্যা হয়েছে</p>';
+      }
+    }
+
+    async function loadWithdrawRequests() {
+      const list = $('#requests-list');
+      list.innerHTML = '<p class="loading-text">লোড হচ্ছে...</p>';
+      if (!db) {
+        list.innerHTML = '<p class="loading-text">Firebase সেটআপ করা হয়নি</p>';
+        return;
+      }
+      try {
+        // Only this bot's withdraw requests
+        const snapshot = await db.collection('withdraws')
+          .where('bot_name', '==', BOT_NAME)
+          .limit(80)
+          .get();
+        if (snapshot.empty) {
+          list.innerHTML = '<p class="loading-text">কোনো Request নেই</p>';
+          return;
+        }
+        // Client-side sort by created_at desc
+        const docs = [];
+        snapshot.forEach(function (doc) {
+          docs.push({ id: doc.id, data: doc.data() });
+        });
+        docs.sort(function (a, b) {
+          const ta = a.data.created_at && a.data.created_at.toMillis ? a.data.created_at.toMillis() : 0;
+          const tb = b.data.created_at && b.data.created_at.toMillis ? b.data.created_at.toMillis() : 0;
+          return tb - ta;
+        });
+
+        list.innerHTML = '';
+        docs.forEach(function (item) {
+          const req = item.data;
+          const id = item.id;
+          const status = req.status || 'pending';
+          const created = req.created_at && req.created_at.toDate
+            ? req.created_at.toDate().toLocaleString()
+            : '-';
+          const div = document.createElement('div');
+          div.className = 'request-item';
+          div.innerHTML =
+            '<div class="req-header">' +
+              '<span class="req-name">' + (req.first_name || 'User') + '</span>' +
+              '<span class="req-status ' + status + '">' + status + '</span>' +
+            '</div>' +
+            '<div class="req-detail">' +
+              'Bot: ' + (req.bot_name || '-') + '<br>' +
+              (req.method || '') + ': ' + (req.account_number || '') + '<br>' +
+              'Points: ' + (req.points || 0) + ' | Amount: ' + Number(req.amount || 0).toFixed(2) + ' tk<br>' +
+              'TG ID: ' + (req.telegram_id || '-') + '<br>' +
+              '<small>' + created + '</small>' +
+            '</div>' +
+            (status === 'pending'
+              ? '<div class="request-actions">' +
+                  '<button class="btn-paid" data-id="' + id + '" data-status="paid">Paid</button>' +
+                  '<button class="btn-reject" data-id="' + id + '" data-status="rejected">Reject</button>' +
+                '</div>'
+              : '');
+          list.appendChild(div);
+        });
+        list.querySelectorAll('.request-actions button').forEach(function (btn) {
+          btn.addEventListener('click', async function () {
+            const id = btn.dataset.id;
+            const status = btn.dataset.status;
+            btn.disabled = true;
+            try {
+              await db.collection('withdraws').doc(id).update({ status: status });
+              showToast(status === 'paid' ? 'Paid করা হয়েছে' : 'Reject করা হয়েছে');
+              loadWithdrawRequests();
+            } catch (e) {
+              showToast('আপডেট করতে সমস্যা হয়েছে');
+              btn.disabled = false;
+            }
+          });
+        });
+      } catch (err) {
+        console.error(err);
+        list.innerHTML = '<p class="loading-text">লোড করতে সমস্যা হয়েছে</p>';
+      }
+    }
+
+    function showPage(id) {
+      $$('.page').forEach(p => p.classList.remove('active'));
+      $('#' + id + '-page').classList.add('active');
+      $$('.nav-item').forEach(n => n.classList.remove('active'));
+      const nb = $('.nav-item[data-page="' + id + '"]');
+      if (nb) nb.classList.add('active');
+    }
+
+    function showToast(msg) {
+      const t = $('#toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2800);
+    }
+
+    function bindEvents() {
+      $$('.nav-item').forEach(b => {
+        b.addEventListener('click', () => showPage(b.dataset.page));
+      });
+      $('#btn-watch-ad').addEventListener('click', handleWatchAd);
+      $('#btn-add-balance').addEventListener('click', handleAddBalance);
+      $('#btn-withdraw').addEventListener('click', handleWithdraw);
+      $('#btn-view-users').addEventListener('click', () => {
+        showPage('users');
+        loadAllUsersWork();
+      });
+      $('#btn-back-users').addEventListener('click', () => showPage('balance'));
+      $('#btn-view-requests').addEventListener('click', () => {
+        showPage('admin');
+        loadWithdrawRequests();
+        updateAdminToggleUI();
+      });
+      $('#btn-back-admin').addEventListener('click', () => showPage('balance'));
+      $('#btn-toggle-work').addEventListener('click', toggleAdsEnabled);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+  </script>
+</body>
+</html>
